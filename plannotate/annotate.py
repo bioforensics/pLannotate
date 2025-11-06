@@ -4,7 +4,10 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pandas as pd
-import streamlit as st
+try:
+    import streamlit as st
+except ImportError:
+    st = None
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -323,6 +326,8 @@ def get_details(inDf, yaml_file_loc):
 
 def cache(*args, **kwargs):
     def decorator(func):
+        if st is None:
+            return func
         try:
             __IPYTHON__  # type: ignore
             # We are in a Jupyter environment, so don't apply st.cache
@@ -340,9 +345,10 @@ def cache(*args, **kwargs):
     show_spinner=False,
 )
 def get_raw_hits(query, linear, yaml_file_loc):
-    progressBar = st.progress(0)
-    progress_amt = 5
-    progressBar.progress(progress_amt)
+    if st:
+        progressBar = st.progress(0)
+        progress_amt = 5
+        progressBar.progress(progress_amt)
 
     databases = rsc.get_yaml(yaml_file_loc)
     increment = int(90 / len(databases))
@@ -381,8 +387,9 @@ def get_raw_hits(query, linear, yaml_file_loc):
 
         raw_hits.append(hits)
 
-        progress_amt += increment
-        progressBar.progress(progress_amt)
+        if st:
+            progress_amt += increment
+            progressBar.progress(progress_amt)
 
     if len(raw_hits) == 0:
         return pd.DataFrame()
@@ -393,7 +400,8 @@ def get_raw_hits(query, linear, yaml_file_loc):
         by=["score", "length", "percmatch"], ascending=[False, False, False]
     )
 
-    progressBar.empty()
+    if st:
+        progressBar.empty()
 
     return blastDf
 
